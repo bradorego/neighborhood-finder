@@ -2,6 +2,7 @@
   <div id="app">
     <h1>{{ msg }}</h1>
     <button id="btn" class="" v-on:click="query">Get Directions</button>
+    <ion-spinner v-if="loading"></ion-spinner>
     <pre v-text="gData" v-if="!loading && gData.exists"></pre>
   </div>
 </template>
