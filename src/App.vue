@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <h1>{{ msg }}</h1>
-    <button id="btn" class="" v-on:click="getDirections">Get Directions</button>
+    <button id="btn" class="" v-on:click="query">Get Directions</button>
     <pre v-text="gData" v-if="!loading && gData.exists"></pre>
   </div>
 </template>
@@ -43,70 +43,82 @@ export default {
     }
   },
   methods: {
+    query: function () {
+      this.loading = true;
+      this.gData.exists = false;
+      Promise.all([
+        this.getPrices(),
+        this.getDrivingDirections(),
+        this.getTransitDirections()
+      ]).then((data) => { /// data == [prices<Array>, drivingDuration<Array>, transitDuration<Array>]
+        this.gData.rent = data[0];
+        this.gData.drivingDuration = data[1];
+        this.gData.transitDuration = data[2];
+        this.gData.exists = true;
+      }).catch((error) => {
+        console.warn(error);
+      }).finally(() => {
+        this.loading = false;
+      });
+    },
     getPrices: function (zipCodes) {
-      axios
+      return axios
         .get(`${API_BASE}/craigslist?zip=11216`)
         .then(response => {
-          this.gData.rent = response.data;
+          // this.gData.rent = response.data;
+          return response.data
         })
-        .catch(error => console.warn(error));
+        .catch(error => error);
     },
-    getDirections: function () {
+    getDrivingDirections: function () {
       let nowNoon = new Date();
       nowNoon.setHours(12); /// let's just assume you're travelling at Noon
       this.loading = true;
       this.gData.exists = false;
-      directionsService.route({
-        origin: "112 Madison Street, Brooklyn, NY",
-        destination: this.params.transit.destination,
-        travelMode: 'TRANSIT',
-        transitOptions: {
-          departureTime: nowNoon
-        }
-      }, (response, status) => {
-        if (status === 'OK') {
-          console.log(response.routes);
-          this.gData.transitDuration = response.routes.reduce((acc, curr) => {
-            return `${curr.legs[0].duration.text}, ${acc}`;
-          }, "");
-          this.gData.exists = true;
-          this.loading = false;
-          this.getPrices();
-        } else {
-          console.error(status, response);
-        }
+      return new Promise((resolve, reject) => {
+        directionsService.route({
+          origin: "112 Madison Street, Brooklyn, NY",
+          destination: this.params.drive.destination,
+          travelMode: 'DRIVING',
+          drivingOptions: {
+            departureTime: nowNoon
+          }
+        }, (response, status) => {
+          if (status === 'OK') { //// response.routes[{legs[{duration.text, duration.value}]}]
+            resolve(this.gData.drivingDuration = response.routes.reduce((acc, curr) => {
+              return `${curr.legs[0].duration.text}, ${acc}`;
+            }, ""));
+          } else {
+            reject({status: status, error: response});
+          }
+        });
+
       });
-      directionsService.route({
-        origin: "112 Madison Street, Brooklyn, NY",
-        destination: this.params.drive.destination,
-        travelMode: 'DRIVING',
-        drivingOptions: {
-          departureTime: nowNoon
-        }
-      }, (response, status) => {
-        if (status === 'OK') {
-          this.gData.drivingDuration = response.routes.reduce((acc, curr) => {
-            return `${curr.legs[0].duration.text}, ${acc}`;
-          }, "");
-          this.gData.exists = true;
-          this.loading = false;
-        } else {
-          console.error(status, response);
-        }
+    },
+    getTransitDirections: function () {
+      let nowNoon = new Date();
+      nowNoon.setHours(12); /// let's just assume you're travelling at Noon
+      this.loading = true;
+      this.gData.exists = false;
+      return new Promise((resolve, reject) => {
+        directionsService.route({
+          origin: "112 Madison Street, Brooklyn, NY",
+          destination: this.params.transit.destination,
+          travelMode: 'TRANSIT',
+          transitOptions: {
+            departureTime: nowNoon
+          }
+        }, (response, status) => {
+          if (status === 'OK') { //// response.routes[{legs[{duration.text, duration.value}]}]
+            console.log(response.routes);
+            resolve(this.gData.transitDuration = response.routes.reduce((acc, curr) => {
+              return `${curr.legs[0].duration.text}, ${acc}`;
+            }, ""));
+          } else {
+            reject({status: status, error: response});
+          }
+        });
       });
-      // let url = "http://maps.googleapis.com/maps/api/directions/json?origin=112%20madison%20st%20brooklyn%20ny&destination=laguardia%20airport%20terminal%20c&mode=transit";
-      // console.log(1);
-      // this.loading = true;
-      // axios.get(url)
-      //   .then((response)  =>  {
-      //     console.log(response);
-      //     this.loading = false;
-      //     this.gData = response.data.value;
-      //     this.gData.exists = true;
-      //   }, (error)  =>  {
-      //     console.warn(error);
-      //     this.loading = false;
-      //   });
     }
   }
 }
