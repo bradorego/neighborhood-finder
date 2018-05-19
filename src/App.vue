@@ -99,7 +99,7 @@ export default {
         })
         .catch(error => error);
     },
-    getDrivingDirections:  (zips) => {
+    getDrivingDirections: function (zips) {
       return new Promise((res, rej) => {
         let promises = [];
         let index = 0;
@@ -108,7 +108,7 @@ export default {
             let internalIndex = index;
             directionsService.route({
               origin: `${zips[internalIndex]}`,
-              destination: _this3.params.drive.destination,
+              destination: this.params.drive.destination,
               travelMode: 'DRIVING',
               // drivingOptions: {
               //   departureTime: this.nowNoon
@@ -116,10 +116,10 @@ export default {
             }, (response, status) => {
               if (status === 'OK') { //// response.routes[{legs[{duration.text, duration.value}]}]
                 let duration = response.routes[0].legs[0].duration; /// we should probably do some error checking here
-                if (duration.value <= _this3.params.drive.max) { /// if short enough, resolve
+                if (duration.value <= this.params.drive.max) { /// if short enough, resolve
                   resolve({zip: zips[internalIndex], drivingDuration: duration.text});
-                  _this3.status.drivingResolved++;
-                  if (_this3.status.drivingResolved >= zips.length) {
+                  this.status.drivingResolved++;
+                  if (this.status.drivingResolved >= zips.length) {
                     res(Promise.all(promises));
                   }
                 }
