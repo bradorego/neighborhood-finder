@@ -2,7 +2,10 @@
   <div id="app">
     <h1>{{ msg }}</h1>
     <button id="btn" class="" v-on:click="query">Get Directions</button>
-    <ion-spinner v-if="loading"></ion-spinner>
+    <div v-if="loading">
+      <ion-spinner v-if="loading"></ion-spinner>
+      Fecthing driving durations: {{status.drivingResolved}} of {{status.drivingTotal}}
+    </div>
     <pre v-text="gData" v-if="!loading && gData.exists"></pre>
   </div>
 </template>
@@ -19,7 +22,13 @@ export default {
   data () {
     return {
       msg: 'Welcome to Your Vue.js App',
-      nowNoon: new Date(),
+      // nowNoon: new Date(),
+      status: {
+        drivingResolved: 0,
+        drivingTotal: zipCodesFlat.length,
+        transitResolved: 0,
+        transitTotal: 0
+      },
       gData: {
         exists: false,
         drivingDuration: false,
@@ -34,11 +43,11 @@ export default {
       outputZips: [],
       params: {
         drive: {
-          max: 3600, /// gmaps directions does time in seconds
+          max: 1800, /// gmaps directions does time in seconds
           destination: "LGA Terminal 3"
         },
         transit: {
-          max: 3600,
+          max: 1800,
           destination: "LGA Terminal 3"
         }
       },
@@ -48,12 +57,11 @@ export default {
   methods: {
     query: function () {
       this.loading = true;
-      this.nowNoon = new Date(); /// probably overkill but 🤷‍♀️
-      this.nowNoon.setHours(12);
-      this.validZips = zipCodesFlat.slice(); /// make a copy of zips on each new query
+      // this.nowNoon = new Date(); /// probably overkill but 🤷‍♀️
+      // this.nowNoon.setHours(12);
       this.gData.exists = false;
       this.outputZips = [];
-      this.getDrivingDirections(this.validZips)
+      this.getDrivingDirections(zipCodesFlat)
         .then((drivingZips) => {
           console.log(drivingZips);
         })
@@ -91,32 +99,44 @@ export default {
         })
         .catch(error => error);
     },
-    getDrivingDirections: function (zips) {
-      let promises = [];
-      zips.forEach((zipCode, zipIndex) => {
-        promises.push(new Promise((resolve, reject) => {
-          directionsService.route({
-            origin: `${zipCode}`,
-            destination: this.params.drive.destination,
-            travelMode: 'DRIVING',
-            drivingOptions: {
-              departureTime: this.nowNoon
-            }
-          }, (response, status) => {
-            if (status === 'OK') { //// response.routes[{legs[{duration.text, duration.value}]}]
-              let duration = response.routes[0].legs[0].duration; /// we should probably do some error checking here
-              if (duration.value > this.params.drive.max) { /// if too long, axe the zipcode
-                zips = zips.splice(zipIndex);
+    getDrivingDirections:  (zips) => {
+      return new Promise((res, rej) => {
+        let promises = [];
+        let index = 0;
+        let i = setInterval(() => {
+          promises.push(new Promise((resolve, reject) => {
+            let internalIndex = index;
+            directionsService.route({
+              origin: `${zips[internalIndex]}`,
+              destination: _this3.params.drive.destination,
+              travelMode: 'DRIVING',
+              // drivingOptions: {
+              //   departureTime: this.nowNoon
+              // }
+            }, (response, status) => {
+              if (status === 'OK') { //// response.routes[{legs[{duration.text, duration.value}]}]
+                let duration = response.routes[0].legs[0].duration; /// we should probably do some error checking here
+                if (duration.value <= _this3.params.drive.max) { /// if short enough, resolve
+                  resolve({zip: zips[internalIndex], drivingDuration: duration.text});
+                  _this3.status.drivingResolved++;
+                  if (_this3.status.drivingResolved >= zips.length) {
+                    res(Promise.all(promises));
+                  }
+                }
               } else {
-                resolve({zip: zipCode, drivingDuration: duration.text});
+                // reject({status: status, error: response});
+                /// fuck it do nothing
               }
-            } else {
-              reject({status: status, error: response});
-            }
-          });
-        }));
+            });
+          }));
+          index++;
+          if (index >= zips.length) {
+            clearInterval(i);
+            // console.log(promises);
+            // res(Promise.all(promises));
+          }
+        }, 250);
       });
-      return Promise.all(promises);
     },
     getTransitDirections: function (zips) {
       let promises = [];
@@ -126,9 +146,9 @@ export default {
             origin: zipCode,
             destination: this.params.transit.destination,
             travelMode: 'TRANSIT',
-            drivingOptions: {
-              departureTime: this.nowNoon
-            }
+            // drivingOptions: {
+            //   departureTime: this.nowNoon
+            // }
           }, (response, status) => {
             if (status === 'OK') { //// response.routes[{legs[{duration.text, duration.value}]}]
               let duration = response.routes[0].legs[0].duration; /// we should probably do some error checking here
