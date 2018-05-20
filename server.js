@@ -1,5 +1,6 @@
 const express = require('express');
 const app = express();
+const compression = require('compression');
 const craigslist = require('node-craigslist');
 
 let cl_client = new craigslist.Client({
@@ -7,13 +8,13 @@ let cl_client = new craigslist.Client({
   category: 'aap'
 });
 
+app.use(compression());
+app.use(express.static('static'));
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   next();
 });
-
-app.get('/', (req, res) => res.send('Hello World!'));
 
 app.get('/craigslist', (req, res) => {
   cl_client.search({
@@ -56,4 +57,7 @@ app.get('/craigslist', (req, res) => {
   });
 });
 
-app.listen(3000, () => console.log('Example app listening on port 3000!'));
+app.set('port', process.env.PORT || 3000);
+app.listen(app.get('port'), function () {
+  console.log('Express server listening on port ' + app.get('port'));
+});
