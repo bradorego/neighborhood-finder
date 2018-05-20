@@ -119,9 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
       $formattedOutput.addClass('hidden');
       $formOutDriving.addClass('hidden');
       $formOutTransit.addClass('hidden');
-      $output.removeClass('hidden');
-      // data.nowNoon = new Date(); /// probably overkill but 🤷‍♀️
-      // data.nowNoon.setHours(12);
+      // $output.removeClass('hidden');
       data.outputZips = [];
       methods.getDrivingDirections(formattedZips).then((drivingZips) => {
         methods.formatOutput(drivingZips, $formOutDriving);
