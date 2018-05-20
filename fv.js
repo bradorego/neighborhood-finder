@@ -183,6 +183,17 @@ document.addEventListener('DOMContentLoaded', () => {
         let promises = [];
         let index = 0;
         let outputZips = [];
+        let findFastestRoute = (routes) => {
+          let minDur = Number.MAX_SAFE_INTEGER;
+          let minRoute = {};
+          routes.forEach((route) => {
+            if (route.legs[0].duration.value < minDur) {
+              minDur = route.legs[0].duration.value;
+              minRoute = route.legs[0].duration;
+            }
+          });
+          return minRoute;
+        };
         data.status[which].resolved = 0;
         let i = setInterval(() => {
           promises.push(new Promise((resolve, reject) => {
@@ -191,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
               origin: `${zips[internalIndex].code}`,
               destination: data.params[which].destination,
               travelMode: which,
-              provideAlternatives: true,
+              provideRouteAlternatives: true,
               drivingOptions: {
                 departureTime: data.params[which].time
               },
@@ -201,8 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             directionsService.route(options, (response, status) => {
               if (status === 'OK') { //// response.routes[{legs[{duration.text, duration.value}]}]
-                console.log(response.routes.length);
-                let duration = response.routes[0].legs[0].duration; /// we should probably do some error checking here
+                let duration = findFastestRoute(response.routes);
                 if (duration.value <= data.params[which].max) { /// it's good: update values and copy
                   zips[internalIndex][which] = duration.text;
                   outputZips.push(zips[internalIndex]);
