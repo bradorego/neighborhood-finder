@@ -20,7 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
     $driveStatus = $('#driving-status'),
     $transitStatus = $('#transit-status'),
     $rentStatus = $('#rent-status')
-    $formattedOutput = $('#formatted-output');
+    $formattedOutput = $('#formatted-output'),
+    $formOutDriving = $('#formatted-output-driving'),
+    $formOutTransit = $('#formatted-output-transit');
 
   let driveAutocomplete = new google.maps.places.Autocomplete($driveTarget[0]);
   driveAutocomplete.addListener('place_changed', () => {
@@ -111,25 +113,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
       $outputDiv.removeClass('hidden');
       $formattedOutput.addClass('hidden');
+      $formOutDriving.addClass('hidden');
+      $formOutTransit.addClass('hidden');
       $output.removeClass('hidden');
       // data.nowNoon = new Date(); /// probably overkill but 🤷‍♀️
       // data.nowNoon.setHours(12);
       data.outputZips = [];
       methods.getDrivingDirections(formattedZips).then((drivingZips) => {
-        console.log(drivingZips);
+        methods.formatOutput(drivingZips, $formOutDriving);
         data.status.TRANSIT.total = drivingZips.length;
-        $output.text(JSON.stringify(drivingZips));
         return methods.getTransitDirections(drivingZips);
       }).then((transitZips) => {
-        console.log(transitZips);
+        methods.formatOutput(transitZips, $formOutTransit);
         data.status.rent.total = transitZips.length;
-        $output.text(JSON.stringify(transitZips));
         return methods.getPrices(transitZips);
       }).then((pricesZips) => {
-        ///get walkscore
+        /// TODO get walkscore
+        $output.addClass('hidden');
         data.outputZips = pricesZips.splice();
-        $output.text(JSON.stringify(pricesZips));
-        methods.formatOutput(pricesZips);
+        methods.formatOutput(pricesZips, $formattedOutput);
       })
       .catch((error) => {
         console.warn(error);
@@ -138,13 +140,12 @@ document.addEventListener('DOMContentLoaded', () => {
         $loading.addClass('hidden');
       });
     },
-    formatOutput: function (zips) {
-      $formattedOutput.empty();
-      $output.addClass('hidden');
+    formatOutput: function (zips, jqDiv) {
+      jqDiv.empty();
       zips.forEach((zip) => {
-        $formattedOutput.append(`<li>Zip: <a href="https://www.google.com/maps?q=${zip.code}" target="_blank">${zip.code}</a>. Driving: ${zip.DRIVING}. Transit: ${zip.TRANSIT}. Rent (min-avg-max): ${zip.rent.min}-${zip.rent.mean}-${zip.rent.max}</li>`)
+        jqDiv.append(`<li>Zip: <a href="https://www.google.com/maps?q=${zip.code}" target="_blank">${zip.code}</a>. Driving: ${zip.DRIVING}. Transit: ${zip.TRANSIT}. Rent (min-avg-max): ${zip.rent.min}-${zip.rent.mean}-${zip.rent.max}</li>`)
       });
-      $formattedOutput.removeClass('hidden');
+      jqDiv.removeClass('hidden');
     },
     getPrices: function (zips) {
       let promises = [];
@@ -187,19 +188,27 @@ document.addEventListener('DOMContentLoaded', () => {
             let options = {
               origin: `${zips[internalIndex].code}`,
               destination: data.params[which].destination,
-              travelMode: which
+              travelMode: which,
+              provideAlternatives: true,
+              drivingOptions: {
+                departureTime: data.params[which].time
+              },
+              transitOptions: {
+                departureTime: data.params[which].time
+              }
             };
-            if (which === "DRIVING") {
-              options.drivingOptions = {
-                departureTime: data.params[which].time
-              };
-            } else {
-              options.transitOptions = {
-                departureTime: data.params[which].time
-              };
-            }
+            // if (which === "DRIVING") {
+            //   options.drivingOptions = {
+            //     departureTime: data.params[which].time
+            //   };
+            // } else {
+            //   options.transitOptions = {
+            //     departureTime: data.params[which].time
+            //   };
+            // }
             directionsService.route(options, (response, status) => {
               if (status === 'OK') { //// response.routes[{legs[{duration.text, duration.value}]}]
+                console.log(response.routes.length);
                 let duration = response.routes[0].legs[0].duration; /// we should probably do some error checking here
                 if (duration.value <= data.params[which].max) { /// it's good: update values and copy
                   zips[internalIndex][which] = duration.text;
