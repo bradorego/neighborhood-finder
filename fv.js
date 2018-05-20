@@ -199,15 +199,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 departureTime: data.params[which].time
               }
             };
-            // if (which === "DRIVING") {
-            //   options.drivingOptions = {
-            //     departureTime: data.params[which].time
-            //   };
-            // } else {
-            //   options.transitOptions = {
-            //     departureTime: data.params[which].time
-            //   };
-            // }
             directionsService.route(options, (response, status) => {
               if (status === 'OK') { //// response.routes[{legs[{duration.text, duration.value}]}]
                 console.log(response.routes.length);
