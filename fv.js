@@ -98,14 +98,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
       let transitTime = new Date();
       transitTime.setDate(transitTime.getDate() + 1); /// to avoid time past error
-      transitTime.setHours($transitTime.val().split(":")[0]); /// time format is "HH:MM"
-      transitTime.setMinutes($transitTime.val().split(":")[1]);
+      if ($transitTime.val()) {
+        transitTime.setHours($transitTime.val().split(":")[0]); /// time format is "HH:MM"
+        transitTime.setMinutes($transitTime.val().split(":")[1]);
+      }
       data.params.TRANSIT.time = transitTime;
 
       let drivingTime = new Date();
       drivingTime.setDate(drivingTime.getDate() + 1); /// to avoid time past error
-      drivingTime.setHours($drivingTime.val().split(":")[0]); /// time format is "HH:MM"
-      drivingTime.setMinutes($drivingTime.val().split(":")[1]);
+      if ($drivingTime.val()) {
+        drivingTime.setHours($drivingTime.val().split(":")[0]); /// time format is "HH:MM"
+        drivingTime.setMinutes($drivingTime.val().split(":")[1]);
+      }
       data.params.DRIVING.time = drivingTime;
 
       $outputDrivingLabel.text(`${data.params.DRIVING.max / 60} minute drive to ${data.params.DRIVING.destination} at ${drivingTime.toLocaleString()}`);
