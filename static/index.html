@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>neighborhood-finder</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
     <style tye="text/css">
@@ -10,9 +11,6 @@
       }
       body {
         font-family: 'Roboto', sans-serif;
-      }
-      .hidden {
-        display: none;
       }
       #fv-output pre {
         white-space: initial;
@@ -27,6 +25,7 @@
         flex-grow: 2;
       }
     </style>
+    <base target="_blank">
   </head>
   <body>
     <div class="container">
@@ -81,29 +80,28 @@
         <button type="submit" class="btn btn-dark" id="fv-btn">Find Neighborhoods!</button>
       </form>
       <div id="fv">
-        <div id="fv-loading" class="hidden">
-          <div class="text-center mt-3">
-            <ion-spinner id="fv-loading"></ion-spinner>
-          </div>
+        <div>
+          <h3>Finding neighborhoods for...</h3>
+          <h4 id="fv-output-driving"></h4>
+          <h4 id="fv-output-transit"></h4>
+        </div>
+        <div id="fv-loading">
           <h3>Fetching driving durations: <span id="driving-status"></span></h3>
           <h3>Fetching transit durations: <span id="transit-status"></span></h3>
           <h3>Getting rent data: <span id="rent-status"></span></h3>
         </div>
-        <div id="fv-output" class="hidden">
-          <h3>Finding neighborhoods for...</h3>
-          <h4 id="fv-output-driving"></h4>
-          <h4 id="fv-output-transit"></h4>
+        <div id="fv-output">
           <pre></pre>
           <h3>Results</h3>
-          <ul id="formatted-output" class="hidden">
+          <ul id="formatted-output">
 
           </ul>
           <h4>After Transit</h4>
-          <ul id="formatted-output-transit" class="hidden">
+          <ul id="formatted-output-transit">
 
           </ul>
           <h4>After Driving</h4>
-          <ul id="formatted-output-driving" class="hidden">
+          <ul id="formatted-output-driving">
 
           </ul>
         </div>

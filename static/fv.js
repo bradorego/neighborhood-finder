@@ -4,19 +4,15 @@ const API_BASE = "";
 
 
 document.addEventListener('DOMContentLoaded', () => {
-  let $btn = $('#fv-btn'),
-    $driveTarget = $('#fv-input-drive'),
+  let $driveTarget = $('#fv-input-drive'),
     $transitTarget = $('#fv-input-transit'),
     $drivingMax = $('#fv-driving-max'),
     $transitMax = $('#fv-transit-max'),
     $drivingTime = $('#fv-driving-time'),
     $transitTime = $('#fv-transit-time'),
     $form = $('#fv-form'),
-    $outputDiv = $('#fv-output'),
-    $output = $outputDiv.find('pre'),
     $outputDrivingLabel = $('#fv-output-driving'),
     $outputTransitLabel = $('#fv-output-transit');
-    $loading = $('#fv-loading'),
     $driveStatus = $('#driving-status'),
     $transitStatus = $('#transit-status'),
     $rentStatus = $('#rent-status')
@@ -96,14 +92,9 @@ document.addEventListener('DOMContentLoaded', () => {
       data.status.TRANSIT = {resolved: 0, total: 0};
       data.status.rent = {resolved: 0, total: 0};
       data.outputZips = [];
-      $outputDiv.addClass('hidden');
-      $formattedOutput.addClass('hidden');
-      $formOutDriving.addClass('hidden');
-      $formOutTransit.addClass('hidden');
     },
     query: function () {
       methods.stateReset();
-      $loading.removeClass('hidden');
       data.params.DRIVING.max = parseInt($drivingMax.val(), 10);
       data.params.TRANSIT.max = parseInt($transitMax.val(), 10);
 
@@ -136,7 +127,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return methods.getPrices(transitZips);
       }).then((pricesZips) => {
         /// TODO get walkscore
-        $output.addClass('hidden');
         data.outputZips = pricesZips.splice();
         methods.formatOutput(pricesZips, $formattedOutput);
       })
@@ -145,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
         alert(`There was an unexpected error. ${error}`);
       })
       .finally(() => {
-        $loading.addClass('hidden');
+        /// show/hide divs
       });
     },
     formatOutput: function (zips, jqDiv) {
@@ -153,7 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
       zips.forEach((zip) => {
         jqDiv.append(`<li>Zip: <a href="https://www.google.com/maps?q=${zip.code}" target="_blank">${zip.code}</a>. Driving: ${zip.DRIVING}. Transit: ${zip.TRANSIT}. Rent (min-avg-max): ${zip.rent.min}-${zip.rent.mean}-${zip.rent.max}</li>`)
       });
-      jqDiv.removeClass('hidden');
     },
     getPrices: function (zips) {
       let promises = [];
