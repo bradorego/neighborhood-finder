@@ -91,7 +91,18 @@ document.addEventListener('DOMContentLoaded', () => {
     loading: false
   };
   let methods = {
+    stateReset: function () {
+      data.status.DRIVING = {resolved: 0, total: formattedZips.length};
+      data.status.TRANSIT = {resolved: 0, total: 0};
+      data.status.rent = {resolved: 0, total: 0};
+      data.outputZips = [];
+      $outputDiv.addClass('hidden');
+      $formattedOutput.addClass('hidden');
+      $formOutDriving.addClass('hidden');
+      $formOutTransit.addClass('hidden');
+    },
     query: function () {
+      methods.stateReset();
       $loading.removeClass('hidden');
       data.params.DRIVING.max = parseInt($drivingMax.val(), 10);
       data.params.TRANSIT.max = parseInt($transitMax.val(), 10);
@@ -115,12 +126,6 @@ document.addEventListener('DOMContentLoaded', () => {
       $outputDrivingLabel.text(`${data.params.DRIVING.max / 60} minute drive to ${data.params.DRIVING.destination} at ${drivingTime.toLocaleString()}`);
       $outputTransitLabel.text(`${data.params.TRANSIT.max / 60} minute public transit to ${data.params.TRANSIT.destination} at ${transitTime.toLocaleString()}`);
 
-      $outputDiv.removeClass('hidden');
-      $formattedOutput.addClass('hidden');
-      $formOutDriving.addClass('hidden');
-      $formOutTransit.addClass('hidden');
-      // $output.removeClass('hidden');
-      data.outputZips = [];
       methods.getDrivingDirections(formattedZips).then((drivingZips) => {
         methods.formatOutput(drivingZips, $formOutDriving);
         data.status.TRANSIT.total = drivingZips.length;
