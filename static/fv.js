@@ -33,8 +33,20 @@ document.addEventListener('DOMContentLoaded', () => {
   let formattedZips = zipCodesFlat.map((x) => {
     return {
       code: x,
-      TRANSIT: null,
-      DRIVING: null,
+      TRANSIT: {
+        duration: null,
+        start: {
+          lat: null,
+          lng: null
+        }
+      },
+      DRIVING: {
+        duration: null,
+        start: {
+          lat: null,
+          lng: null
+        }
+      },
       rent: {
         min: null,
         max: null,
@@ -141,7 +153,20 @@ document.addEventListener('DOMContentLoaded', () => {
     formatOutput: function (zips, jqDiv) {
       jqDiv.empty();
       zips.forEach((zip) => {
-        jqDiv.append(`<li>Zip: <a href="https://www.google.com/maps?q=${zip.code}" target="_blank">${zip.code}</a>. Driving: ${zip.DRIVING}. Transit: ${zip.TRANSIT}. Rent (min-avg-max): ${zip.rent.min}-${zip.rent.mean}-${zip.rent.max}</li>`)
+        jqDiv.append(`
+          <li>Zip: <a href="https://www.google.com/maps?q=${zip.code}">${zip.code}</a>
+            <ul>
+              <li>Driving: ${zip.DRIVING.duration}</li>
+              <li>Transit: ${zip.TRANSIT.duration}</li>
+              <li><a href="https://newyork.craigslist.org/search/aap?search_distance=1&postal=${zip.code}">Rent</a>
+                <ul>
+                  <li>Min: ${zip.rent.min}</li>
+                  <li>Avg: ${zip.rent.mean}</li>
+                  <li>Max: ${zip.rent.max}</li>
+                </ul>
+              </li>
+            </ul>
+          </li>`);
       });
     },
     getPrices: function (zips) {
@@ -184,10 +209,10 @@ document.addEventListener('DOMContentLoaded', () => {
           routes.forEach((route) => {
             if (route.legs[0].duration.value < minDur) {
               minDur = route.legs[0].duration.value;
-              minRoute = route.legs[0].duration;
+              minRouteLeg = route.legs[0];
             }
           });
-          return minRoute;
+          return minRouteLeg;
         };
         data.status[which].resolved = 0;
         let i = setInterval(() => {
@@ -207,9 +232,15 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             directionsService.route(options, (response, status) => {
               if (status === 'OK') { //// response.routes[{legs[{duration.text, duration.value}]}]
-                let duration = findFastestRoute(response.routes);
-                if (duration.value <= data.params[which].max) { /// it's good: update values and copy
-                  zips[internalIndex][which] = duration.text;
+                let leg = findFastestRoute(response.routes);
+                if (leg.duration.value <= data.params[which].max) { /// it's good: update values and copy
+                  zips[internalIndex][which] = {
+                    duration: leg.duration.text,
+                    start: {
+                      lat: leg.start_location.lat(),
+                      lng: leg.start_location.lng()
+                    }
+                  };
                   outputZips.push(zips[internalIndex]);
                 } else {
                   ///do nothing
