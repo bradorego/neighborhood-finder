@@ -43,36 +43,48 @@
       <form class="d-flex flex-column" id="fv-form">
         <div class="d-flex flex-row">
           <div class="form-group flex-grow-2">
+            <label for="exampleInputEmail1">Driving Destination</label>
             <input class="form-control" id="fv-input-drive" type="text" placeholder="Driving Target">
           </div>
           <div class="form-group">
+            <label for="exampleInputEmail1">Max Time</label>
             <select class="form-control" id="fv-driving-max">
               <option value="900">15 mins</option>
               <option value="1800" selected>30 mins</option>
               <option value="2700">45 mins</option>
-              <option value=3600>60 mins</option>
+              <option value="3600">60 mins</option>
               <option value="4500">75 mins</option>
               <option value="5400">90 mins</option>
               <option value="6300">105 mins</option>
               <option value="7200">120 mins</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label for="exampleInputEmail1">Departure Time</label>
+            <input class="form-control" type="time" id="fv-driving-time">
           </div>
         </div>
         <div class="d-flex flex-row">
           <div class="form-group flex-grow-2">
+            <label for="exampleInputEmail1">Transit Destination</label>
             <input class="form-control" id="fv-input-transit" type="text" placeholder="Transit Target">
           </div>
           <div class="form-group">
+            <label for="exampleInputEmail1">Max Time</label>
             <select class="form-control" id="fv-transit-max">
               <option value="900">15 mins</option>
               <option value="1800" selected>30 mins</option>
               <option value="2700">45 mins</option>
-              <option value=3600>60 mins</option>
+              <option value="3600">60 mins</option>
               <option value="4500">75 mins</option>
               <option value="5400">90 mins</option>
               <option value="6300">105 mins</option>
               <option value="7200">120 mins</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label for="exampleInputEmail1">Departure Time</label>
+            <input class="form-control" type="time" id="fv-transit-time">
           </div>
         </div>
         <button type="submit" class="btn btn-primary" id="fv-btn">Find Neighborhoods!</button>
@@ -89,6 +101,9 @@
           <h4 id="fv-output-driving"></h4>
           <h4 id="fv-output-transit"></h4>
           <pre></pre>
+          <ul id="formatted-output" class="hidden">
+
+          </ul>
         </div>
       </div>
     </div>

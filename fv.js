@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
     $transitTarget = $('#fv-input-transit'),
     $drivingMax = $('#fv-driving-max'),
     $transitMax = $('#fv-transit-max'),
+    $drivingTime = $('#fv-driving-time'),
+    $transitTime = $('#fv-transit-time'),
     $form = $('#fv-form'),
     $outputDiv = $('#fv-output'),
     $output = $outputDiv.find('pre'),
@@ -17,7 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
     $loading = $('#fv-loading'),
     $driveStatus = $('#driving-status'),
     $transitStatus = $('#transit-status'),
-    $rentStatus = $('#rent-status');
+    $rentStatus = $('#rent-status')
+    $formattedOutput = $('#formatted-output');
 
   let driveAutocomplete = new google.maps.places.Autocomplete($driveTarget[0]);
   driveAutocomplete.addListener('place_changed', () => {
@@ -44,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
   $form.submit((e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log(1);
     if (data.params.DRIVING.destination) {
       if (data.params.TRANSIT.destination) {
         methods.query();
@@ -75,25 +77,41 @@ document.addEventListener('DOMContentLoaded', () => {
     params: {
       DRIVING: {
         max: 1800, /// gmaps directions does time in seconds
-        destination: ""
+        destination: "",
+        time: null
       },
       TRANSIT: {
         max: 1800,
-        destination: ""
+        destination: "",
+        time: null
       }
     },
     loading: false
   };
   let methods = {
     query: function () {
-      $loading.toggleClass('hidden');
+      $loading.removeClass('hidden');
       data.params.DRIVING.max = parseInt($drivingMax.val(), 10);
       data.params.TRANSIT.max = parseInt($transitMax.val(), 10);
 
-      $outputDrivingLabel.text(`${data.params.DRIVING.max / 60} minute drive to ${data.params.DRIVING.destination}`);
-      $outputTransitLabel.text(`${data.params.TRANSIT.max / 60} minute public transit to ${data.params.TRANSIT.destination}`);
+      let transitTime = new Date();
+      transitTime.setDate(transitTime.getDate() + 1); /// to avoid time past error
+      transitTime.setHours($transitTime.val().split(":")[0]); /// time format is "HH:MM"
+      transitTime.setMinutes($transitTime.val().split(":")[1]);
+      data.params.TRANSIT.time = transitTime;
 
-      $outputDiv.toggleClass('hidden');
+      let drivingTime = new Date();
+      drivingTime.setDate(drivingTime.getDate() + 1); /// to avoid time past error
+      drivingTime.setHours($drivingTime.val().split(":")[0]); /// time format is "HH:MM"
+      drivingTime.setMinutes($drivingTime.val().split(":")[1]);
+      data.params.DRIVING.time = drivingTime;
+
+      $outputDrivingLabel.text(`${data.params.DRIVING.max / 60} minute drive to ${data.params.DRIVING.destination} at ${drivingTime.toLocaleString()}`);
+      $outputTransitLabel.text(`${data.params.TRANSIT.max / 60} minute public transit to ${data.params.TRANSIT.destination} at ${transitTime.toLocaleString()}`);
+
+      $outputDiv.removeClass('hidden');
+      $formattedOutput.addClass('hidden');
+      $output.removeClass('hidden');
       // data.nowNoon = new Date(); /// probably overkill but 🤷‍♀️
       // data.nowNoon.setHours(12);
       data.outputZips = [];
@@ -111,13 +129,22 @@ document.addEventListener('DOMContentLoaded', () => {
         ///get walkscore
         data.outputZips = pricesZips.splice();
         $output.text(JSON.stringify(pricesZips));
+        methods.formatOutput(pricesZips);
       })
       .catch((error) => {
         console.warn(error);
       })
       .finally(() => {
-        $loading.toggleClass('hidden');
+        $loading.addClass('hidden');
       });
+    },
+    formatOutput: function (zips) {
+      $formattedOutput.empty();
+      $output.addClass('hidden');
+      zips.forEach((zip) => {
+        $formattedOutput.append(`<li>Zip: <a href="https://www.google.com/maps?q=${zip.code}" target="_blank">${zip.code}</a>. Driving: ${zip.DRIVING}. Transit: ${zip.TRANSIT}. Rent (min-avg-max): ${zip.rent.min}-${zip.rent.mean}-${zip.rent.max}</li>`)
+      });
+      $formattedOutput.removeClass('hidden');
     },
     getPrices: function (zips) {
       let promises = [];
@@ -157,11 +184,21 @@ document.addEventListener('DOMContentLoaded', () => {
         let i = setInterval(() => {
           promises.push(new Promise((resolve, reject) => {
             let internalIndex = index;
-            directionsService.route({
+            let options = {
               origin: `${zips[internalIndex].code}`,
               destination: data.params[which].destination,
               travelMode: which
-            }, (response, status) => {
+            };
+            if (which === "DRIVING") {
+              options.drivingOptions = {
+                departureTime: data.params[which].time
+              };
+            } else {
+              options.transitOptions = {
+                departureTime: data.params[which].time
+              };
+            }
+            directionsService.route(options, (response, status) => {
               if (status === 'OK') { //// response.routes[{legs[{duration.text, duration.value}]}]
                 let duration = response.routes[0].legs[0].duration; /// we should probably do some error checking here
                 if (duration.value <= data.params[which].max) { /// it's good: update values and copy
