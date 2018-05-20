@@ -1,0 +1,196 @@
+let directionsService = new google.maps.DirectionsService;
+let zipCodesFlat = [10453,10457,10460,10458,10467,10468,10451,10452,10456,10454,10455,10459,10474,10463,10471,10466,10469,10470,10475,10461,10462,10464,10465,10472,10473,11212,11213,11216,11233,11238,11209,11214,11228,11204,11218,11219,11230,11234,11236,11239,11223,11224,11229,11235,11201,11205,11215,11217,11231,11203,11210,11225,11226,11207,11208,11211,11222,11220,11232,11206,11221,11237,10026,10027,10030,10037,10039,10001,10011,10018,10019,10020,10036,10029,10035,10010,10016,10017,10022,10012,10013,10014,10004,10005,10006,10007,10038,10280,10002,10003,10009,10021,10028,10044,10065,10075,10128,10023,10024,10025,10031,10032,10033,10034,10040,11361,11362,11363,11364,11354,11355,11356,11357,11358,11359,11360,11365,11366,11367,11412,11423,11432,11433,11434,11435,11436,11101,11102,11103,11104,11105,11106,11374,11375,11379,11385,11691,11692,11693,11694,11695,11697,11004,11005,11411,11413,11422,11426,11427,11428,11429,11414,11415,11416,11417,11418,11419,11420,11421,11368,11369,11370,11372,11373,11377,11378,10302,10303,10310,10306,10307,10308,10309,10312,10301,10304,10305,10314];
+const API_BASE = "http://localhost:3000";
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  let $btn = $('#fv-btn'),
+    $driveTarget = $('#fv-input-drive'),
+    $transitTarget = $('#fv-input-transit'),
+    $drivingMax = $('#fv-driving-max'),
+    $transitMax = $('#fv-transit-max'),
+    $form = $('#fv-form'),
+    $outputDiv = $('#fv-output'),
+    $output = $outputDiv.find('pre'),
+    $outputDrivingLabel = $('#fv-output-driving'),
+    $outputTransitLabel = $('#fv-output-transit');
+    $loading = $('#fv-loading'),
+    $driveStatus = $('#driving-status'),
+    $transitStatus = $('#transit-status'),
+    $rentStatus = $('#rent-status');
+
+  let driveAutocomplete = new google.maps.places.Autocomplete($driveTarget[0]);
+  driveAutocomplete.addListener('place_changed', () => {
+    let place = driveAutocomplete.getPlace();
+    data.params.DRIVING.destination = place.formatted_address;
+  });
+  let transitAutocomplete = new google.maps.places.Autocomplete($transitTarget[0]);
+  transitAutocomplete.addListener('place_changed', () => {
+    let place = transitAutocomplete.getPlace();
+    data.params.TRANSIT.destination = place.formatted_address;
+  });
+  let formattedZips = zipCodesFlat.map((x) => {
+    return {
+      code: x,
+      TRANSIT: null,
+      DRIVING: null,
+      rent: {
+        min: null,
+        max: null,
+        mean: null
+      }
+    }
+  });
+  $form.submit((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log(1);
+    if (data.params.DRIVING.destination) {
+      if (data.params.TRANSIT.destination) {
+        methods.query();
+      } else {
+        alert("Please select transit destination");
+      }
+    } else {
+      alert("Please select driving destination");
+    }
+    // methods.query();
+  });
+  let data = {
+    status: {
+      DRIVING: {
+        resolved: 0,
+        total: formattedZips.length
+      },
+      TRANSIT: {
+        resolved: 0,
+        total: 0
+      },
+      rent: {
+        resolved: 0,
+        total: 0
+      }
+    },
+    outputZips: [],
+    params: {
+      DRIVING: {
+        max: 1800, /// gmaps directions does time in seconds
+        destination: ""
+      },
+      TRANSIT: {
+        max: 1800,
+        destination: ""
+      }
+    },
+    loading: false
+  };
+  let methods = {
+    query: function () {
+      $loading.toggleClass('hidden');
+      data.params.DRIVING.max = parseInt($drivingMax.val(), 10);
+      data.params.TRANSIT.max = parseInt($transitMax.val(), 10);
+
+      $outputDrivingLabel.text(`${data.params.DRIVING.max / 60} minute drive to ${data.params.DRIVING.destination}`);
+      $outputTransitLabel.text(`${data.params.TRANSIT.max / 60} minute public transit to ${data.params.TRANSIT.destination}`);
+
+      $outputDiv.toggleClass('hidden');
+      // data.nowNoon = new Date(); /// probably overkill but 🤷‍♀️
+      // data.nowNoon.setHours(12);
+      data.outputZips = [];
+      methods.getDrivingDirections(formattedZips).then((drivingZips) => {
+        console.log(drivingZips);
+        data.status.TRANSIT.total = drivingZips.length;
+        $output.text(JSON.stringify(drivingZips));
+        return methods.getTransitDirections(drivingZips);
+      }).then((transitZips) => {
+        console.log(transitZips);
+        data.status.rent.total = transitZips.length;
+        $output.text(JSON.stringify(transitZips));
+        return methods.getPrices(transitZips);
+      }).then((pricesZips) => {
+        ///get walkscore
+        data.outputZips = pricesZips.splice();
+        $output.text(JSON.stringify(pricesZips));
+      })
+      .catch((error) => {
+        console.warn(error);
+      })
+      .finally(() => {
+        $loading.toggleClass('hidden');
+      });
+    },
+    getPrices: function (zips) {
+      let promises = [];
+      zips.forEach((zip) => {
+        promises.push(new Promise((res, rej) => {
+          $.ajax({
+            url: `${API_BASE}/craigslist?zip=${zip.code}`,
+            method: 'get',
+            success: (data) => {
+              zip.rent = data;
+              res(zip);
+            },
+            error: (err) => {
+              rej(err);
+            },
+            complete: () => {
+              data.status.rent.resolved++;
+              $rentStatus.text(`${data.status.rent.resolved} of ${data.status.rent.total}`);
+            }
+          });
+        }));
+      });
+      return Promise.all(promises);
+    },
+    getDrivingDirections: function (zips) {
+      return methods.directionsAbstraction(zips, 'DRIVING');
+    },
+    getTransitDirections: function (zips) {
+      return methods.directionsAbstraction(zips, 'TRANSIT');
+    },
+    directionsAbstraction: function (zips, which) { /// zips = {code, TRANSIT, DRIVING}, which === "DRIVING"|"TRANSIT"
+      return new Promise((res, rej) => {
+        let promises = [];
+        let index = 0;
+        let outputZips = [];
+        data.status[which].resolved = 0;
+        let i = setInterval(() => {
+          promises.push(new Promise((resolve, reject) => {
+            let internalIndex = index;
+            directionsService.route({
+              origin: `${zips[internalIndex].code}`,
+              destination: data.params[which].destination,
+              travelMode: which
+            }, (response, status) => {
+              if (status === 'OK') { //// response.routes[{legs[{duration.text, duration.value}]}]
+                let duration = response.routes[0].legs[0].duration; /// we should probably do some error checking here
+                if (duration.value <= data.params[which].max) { /// it's good: update values and copy
+                  zips[internalIndex][which] = duration.text;
+                  outputZips.push(zips[internalIndex]);
+                } else {
+                  ///do nothing
+                }
+              } else {
+                /// handle error gracefully
+              }
+              /// if-else-finally
+              data.status[which].resolved++;
+              if (which === "DRIVING") {
+                $driveStatus.text(`${data.status[which].resolved} of ${data.status[which].total}`);
+              } else {
+                $transitStatus.text(`${data.status[which].resolved} of ${data.status[which].total}`);
+              }
+              if (data.status[which].resolved >= zips.length) { /// we've finished them all, so return
+                res(outputZips);
+              }
+            });
+          }));
+          index++;
+          if (index >= zips.length) { /// we've started them all, so stop sending
+            clearInterval(i);
+          }
+        }, 250);
+      });
+    }
+  };
+});
